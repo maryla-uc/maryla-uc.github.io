@@ -139,6 +139,7 @@
     <div class="container">
         <h1>Alpha Blending Modes Comparison Tool</h1>
         <div class="info">
+            Note that computation for HDR images is done in 8bit so banding may be visible. This is a limitation of this demo.
             <div id="experimentalFlagsRuntimeWarning" class="warning" style="display: none; margin-top: 10px; padding: 10px; border: 1px solid #d9534f; border-radius: 4px;">
                 <strong>HDR images will not work unless viewed in Chrome with the Experiment Platform Features flag enabled: chrome://flags/#enable-experimental-web-platform-features<br/>
                     You also need and HDR display to see anything interesting!
@@ -373,11 +374,6 @@
         }
 
         // PQ (Perceptual Quantizer - SMPTE ST 2084)
-        const m1 = 2610 / 16384;
-        const m2 = 2523 / 4096 * 128;
-        const c1 = 3424 / 4096;
-        const c2 = 2374 / 4096 * 128;
-        const c3 = 32 / 4096 * 128;
         const SDR_WHITE_NITS = 203;
         const PQ_MAX_NITS = 10000;
 
@@ -393,11 +389,6 @@
             } else {
                 return 0;
             }
-
-            // c /= 255; // Normalize 0-255 to 0-1 for curve input
-            // const p = Math.pow(c, 1 / m2);
-            // const l = Math.pow(Math.max(0, p - c1), 1 / m1);
-            // return l; // Returns value normalized 0-1 (linear relative to 10000 nits)
         }
 
         function linearToPQ(l) {
@@ -411,11 +402,6 @@
             } else {
                 return 0;
             }
-
-            // l = Math.max(0, l); // Ensure non-negative linear light (0-1)
-            // const p = Math.pow(l, m1);
-            // const c = Math.pow((c1 + p) / (1 + c2 * p), m2);
-            // return Math.round(c * 255); // Scale back to 0-255 for display
         }
 
         // Generic Gamma Function
