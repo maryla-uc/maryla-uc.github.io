@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alpha Blending Modes Tool</title>
+    <title>Alpha Compositing Tool</title>
     <style>
         body {
             font-family: sans-serif;
@@ -64,6 +64,65 @@
             min-width: 220px;
         }
 
+        .label-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            /* This replaces the margin on the label */
+            margin-bottom: 5px;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background-color: #a0a0a0;
+            color: white;
+            font-size: 13px;
+            font-style: italic;
+            font-family: Georgia, serif;
+            font-weight: bold;
+            cursor: help;
+            user-select: none;
+            line-height: 18px; /* Center 'i' vertically */
+        }
+
+        .tooltip .tooltip-content {
+            visibility: hidden;
+            opacity: 0;
+            width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 10;
+            bottom: 140%; /* Position above the icon */
+            left: 50%;
+            transform: translateX(-50%);
+            transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            /* Reset styles inherited from label */
+            font-weight: normal;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        /* Show on hover */
+        .tooltip:hover .tooltip-content {
+            visibility: visible;
+            opacity: 1;
+        }
+
         #transferFunctionGroup {
             display: flex;
             flex-direction: column;
@@ -71,11 +130,9 @@
         }
 
         label {
-            margin-bottom: 5px;
             font-weight: bold;
             color: #555;
             text-align: left;
-            width: 100%;
         }
 
         select, input[type="range"] {
@@ -91,6 +148,19 @@
             outline: none;
             cursor: pointer;
         }
+
+        /* Tooltip arrow */
+        .tooltip .tooltip-content::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -6px;
+            border-width: 6px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+
 
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
@@ -137,7 +207,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Alpha Blending Modes Comparison Tool</h1>
+        <h1>Alpha Compositing Comparison Tool</h1>
         <div class="info">
             Note that computation for HDR images is done in 8bit so banding may be visible. This is a limitation of this demo.
             <div id="experimentalFlagsRuntimeWarning" class="warning" style="display: none; margin-top: 10px; padding: 10px; border: 1px solid #d9534f; border-radius: 4px;">
@@ -148,7 +218,13 @@
 
         <div class="controls">
             <div class="control-group">
-                <label for="backgroundColor">Background Color:</label>
+                <div class="label-wrapper">
+                    <label for="backgroundColor">Background Color:</label>
+                    <div class="tooltip">
+                        <span class="tooltip-icon">i</span>
+                        <span class="tooltip-content">Color of the background layer. The foreground image will be blended on top of this color.</span>
+                    </div>
+                </div>
                 <select id="backgroundColor">
                     <option value="#000000">Black</option>
                     <option value="#FFFFFF">White</option>
@@ -163,7 +239,13 @@
             </div>
 
             <div class="control-group">
-                <label for="foregroundImage">Foreground Image:</label>
+                <div class="label-wrapper">
+                    <label for="foregroundImage">Foreground Image:</label>
+                    <div class="tooltip">
+                        <span class="tooltip-icon">i</span>
+                        <span class="tooltip-content">Image that will be blended on top of the background color, using the provided alpha mask. Images marked 'HDR (PQ)' are High Dynamic Range and require a compatible display and browser for correct viewing. The tool will select the correct Transfer Function automatically.</span>
+                    </div>
+                </div>
                 <select id="foregroundImage">
                     <option value="data/pigeon.jpg">Pigeon SDR</option>
                     <option value="data/rainbow.png" selected>Rainbow SDR</option>
@@ -175,7 +257,13 @@
             </div>
 
             <div class="control-group">
-                <label for="alphaMask">Alpha Mask:</label>
+                <div class="label-wrapper">
+                    <label for="alphaMask">Alpha Mask:</label>
+                    <div class="tooltip">
+                        <span class="tooltip-icon">i</span>
+                        <span class="tooltip-content">A grayscale image used to define the opacity for the foreground image.</span>
+                    </div>
+                </div>
                 <select id="alphaMask">
                     <option value="data/opaque.png">Opaque</option>
                     <option value="data/gray.png">Half Opaque</option>
@@ -186,17 +274,29 @@
             </div>
 
             <div class="control-group">
-                <label for="premultiplication">Premultiplication:</label>
+                <div class="label-wrapper">
+                    <label for="premultiplication">Premultiplication:</label>
+                    <div class="tooltip">
+                        <span class="tooltip-icon">i</span>
+                        <span class="tooltip-content">Defines whether the foreground image is multiplied by the alpha value *before* the main blending step. 'None' is the standard unmultiplied (aka "straight alpha"). Other options perform this premultiplication in different color spaces.</span>
+                    </div>
+                </div>
                 <select id="premultiplication">
                     <option value="None" selected>None</option>
-                    <option value="Gamma">RGB Gamma</option>
-                    <option value="Linear">RGB Linear</option>
+                    <option value="Gamma">Gamma RGB</option>
+                    <option value="Linear">Linear RGB</option>
                     <option value="YUV">YUV</option>
                 </select>
             </div>
 
             <div class="control-group">
-                <label for="blendingColorSpace">Blending Space:</label>
+                <div class="label-wrapper"> 
+                    <label for="blendingColorSpace">Compositing Space:</label> 
+                    <div class="tooltip"> 
+                        <span class="tooltip-icon">i</span> 
+                        <span class="tooltip-content">The color space where the compositing formula is applied. 'Linear RGB' is physically accurate and produces the best visual results. 'Gamma RGB' is a common but less accurate method. 'YUV' is less common, and produces wrong results when RGB premultiplication is used.</span> 
+                    </div>
+                </div>
                 <select id="blendingColorSpace">
                     <option value="RGB_Gamma" selected>Gamma RGB</option>
                     <option value="RGB_Linear">Linear RGB</option>
@@ -206,7 +306,13 @@
             </div>
 
             <div class="control-group" id="transferFunctionGroup">
-                <label for="transferFunction">Transfer Function:</label>
+                <div class="label-wrapper">
+                    <label for="transferFunction">Transfer Function:</label>
+                    <div class="tooltip">
+                        <span class="tooltip-icon">i</span> 
+                        <span class="tooltip-content">The function used to convert image color values to and from a linear light representation. Used when Compositing Space or Premultiplication is set to 'Linear RGB'. This should match the source image's encoding (i.e. sRGB for most web images, PQ for HDR). The tool sets this automatically when you change the foreground image.</span> 
+                    </div>
+                </div>
                 <select id="transferFunction">
                     <option value="sRGB_IEC_61966_2_1">sRGB</option>
                     <option value="BT_709">BT.709</option>
